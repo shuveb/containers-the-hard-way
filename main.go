@@ -17,8 +17,9 @@ func main() {
 	}
 	initGockerDirs()
 
-	//src := "alpine:latest"
-	src := "ubuntu:20.04"
-	//src := "centos:8"
-	runContainer(src, "/bin/sh")
+	if os.Args[1] == "child-mode" {
+		execContainerCommand(os.Args[2])
+		os.Exit(0)
+	}
+	initContainer(os.Args[1])
 }
