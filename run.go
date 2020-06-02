@@ -10,13 +10,12 @@ import (
 	"syscall"
 )
 
-func createContainerID() (contID string){
+func createContainerID() string {
 	randBytes := make([]byte, 6)
 	rand.Read(randBytes)
-	contID = fmt.Sprintf("%02x%02x%02x%02x%02x%02x",
+	return fmt.Sprintf("%02x%02x%02x%02x%02x%02x",
 						randBytes[0], randBytes[1], randBytes[2],
 						randBytes[3], randBytes[4], randBytes[5])
-	return contID
 }
 
 func getContainerFSHome(contanerID string) string {
@@ -65,19 +64,51 @@ func execContainerCommand(containerID string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	doOrDie(syscall.Sethostname([]byte(containerID)))
-	doOrDie(syscall.Chroot(mntPath))
-	doOrDie(os.Chdir("/"))
-	doOrDie(syscall.Mount("proc", "/proc", "proc", 0, ""))
+	doOrDieWithMsg(syscall.Sethostname([]byte(containerID)), "Unable to set hostname")
+	doOrDieWithMsg(joinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
+	doOrDieWithMsg(syscall.Chroot(mntPath), "Unable to chroot")
+	doOrDieWithMsg(os.Chdir("/"), "Unable to change directory")
+	createDirsIfDontExist([]string{"/proc"})
+	doOrDieWithMsg(syscall.Mount("proc", "/proc", "proc", 0, ""), "Unable to mount proc")
+	doOrDieWithMsg(syscall.Mount("tmpfs", "/tmp", "tmpfs", 0, ""), "Unable to mount tmpfs")
+	setupLocalInterface()
 	cmd.Run()
 	doOrDie(syscall.Unmount("/proc", 0))
+	doOrDie(syscall.Unmount("/tmp", 0))
 }
 
 func spawnChild(containerID string) {
-	args := append([]string{containerID}, os.Args[2:]...)
+
+	/* Setup the network namespace  */
+	cmd := &exec.Cmd{
+		Path: "/proc/self/exe",
+		Args: []string{"/proc/self/exe", "setup-netns", containerID},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	cmd.Run()
+
+	/* Setup the virtual interface  */
+	cmd = &exec.Cmd{
+		Path: "/proc/self/exe",
+		Args: []string{"/proc/self/exe", "fence-veth", containerID},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	cmd.Run()
+
+	/* Setup the virtual interface  */
+	cmd = &exec.Cmd{
+		Path: "/proc/self/exe",
+		Args: []string{"/proc/self/exe", "setup-veth", containerID},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	cmd.Run()
+
+	args := append([]string{containerID}, os.Args[3:]...)
 	args = append([]string{"child-mode"}, args...)
-	log.Printf("Child command args: %s\n", args)
-	cmd := exec.Command("/proc/self/exe", args...)
+	cmd = exec.Command("/proc/self/exe", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -95,6 +126,9 @@ func initContainer(src string)  {
 	log.Printf("Image to overlay mount: %s\n", imageShaHex)
 	createContainerDirectories(containerID)
 	mountOverlayFileSystem(containerID, imageShaHex)
+	if err := setupVirtualEthOnHost(containerID); err != nil {
+		log.Fatalf("Unable to setup Veth0 on host: %v", err)
+	}
 	spawnChild(containerID)
 	log.Printf("Container done.\n")
 	doOrDie(syscall.Unmount(getContainerFSHome(containerID) + "/mnt", 0))

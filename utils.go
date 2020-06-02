@@ -12,11 +12,27 @@ const gockerHomePath 		= "/var/lib/gocker"
 const gockerTempPath 		= gockerHomePath + "/tmp"
 const gockerImagesPath 		= gockerHomePath + "/images"
 const gockerContainersPath 	= "/var/run/gocker/containers"
+const gockerNetNsPath 		= "/var/run/gocker/net-ns"
 
 func doOrDie(err error) {
 	if err != nil {
 		log.Fatalf("Fatal error: %v\n", err)
 	}
+}
+
+func doOrDieWithMsg(err error, msg string) {
+	if err != nil {
+		log.Fatalf("Fatal error: %s: %v\n", msg, err)
+	}
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
 
 func createDirsIfDontExist(dirs []string) (err error){
@@ -50,6 +66,10 @@ func getGockerTempPath() string {
 
 func getGockerContainersPath() string {
 	return gockerContainersPath
+}
+
+func getGockerNetNsPath() string {
+	return gockerNetNsPath
 }
 
 func copyFile(src, dst string) (err error) {
