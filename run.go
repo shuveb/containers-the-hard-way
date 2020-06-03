@@ -54,6 +54,20 @@ func mountOverlayFileSystem(containerID string, imageShaHex string) {
 	}
 }
 
+func unmountNetworkNamespace(containerID string) {
+	netNsPath := getGockerNetNsPath() + "/" + containerID
+	if err := syscall.Unmount(netNsPath, 0); err != nil {
+		log.Fatalf("Uable to mount network namespace: %v at %s", err, netNsPath)
+	}
+}
+
+func unmountContainerFs(containerID string) {
+	mountedPath := getGockerContainersPath() + "/" + containerID + "/fs/mnt"
+	if err := syscall.Unmount(mountedPath, 0); err != nil {
+		log.Fatalf("Uable to mount container file system: %v at %s", err, mountedPath)
+	}
+}
+
 /*
 	Called if this program is executed with "child-mode" as the first argument
 */
@@ -105,6 +119,23 @@ func spawnChild(containerID string) {
 		Stderr: os.Stderr,
 	}
 	cmd.Run()
+	/*
+	From namespaces(7)
+	       Namespace Flag            Isolates
+	       --------- ----   		 --------
+	       Cgroup    CLONE_NEWCGROUP Cgroup root directory
+	       IPC       CLONE_NEWIPC    System V IPC,
+	                                 POSIX message queues
+	       Network   CLONE_NEWNET    Network devices,
+	                                 stacks, ports, etc.
+	       Mount     CLONE_NEWNS     Mount points
+	       PID       CLONE_NEWPID    Process IDs
+	       Time      CLONE_NEWTIME   Boot and monotonic
+	                                 clocks
+	       User      CLONE_NEWUSER   User and group IDs
+	       UTS       CLONE_NEWUTS    Hostname and NIS
+	                                 domain name
+	*/
 
 	args := append([]string{containerID}, os.Args[3:]...)
 	args = append([]string{"child-mode"}, args...)
@@ -113,7 +144,10 @@ func spawnChild(containerID string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS,
+		Cloneflags: 	syscall.CLONE_NEWPID |
+						syscall.CLONE_NEWNS |
+						syscall.CLONE_NEWUTS |
+						syscall.CLONE_NEWIPC,
 		Unshareflags: syscall.CLONE_NEWNS,
 	}
 	doOrDie(cmd.Run())
@@ -131,5 +165,6 @@ func initContainer(src string)  {
 	}
 	spawnChild(containerID)
 	log.Printf("Container done.\n")
-	doOrDie(syscall.Unmount(getContainerFSHome(containerID) + "/mnt", 0))
+	unmountNetworkNamespace(containerID)
+	unmountContainerFs(containerID)
 }
