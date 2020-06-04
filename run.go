@@ -80,6 +80,7 @@ func execContainerCommand(containerID string) {
 
 	doOrDieWithMsg(syscall.Sethostname([]byte(containerID)), "Unable to set hostname")
 	doOrDieWithMsg(joinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
+	createCGroups(containerID)
 	doOrDieWithMsg(syscall.Chroot(mntPath), "Unable to chroot")
 	doOrDieWithMsg(os.Chdir("/"), "Unable to change directory")
 	createDirsIfDontExist([]string{"/proc"})
@@ -91,7 +92,7 @@ func execContainerCommand(containerID string) {
 	doOrDie(syscall.Unmount("/tmp", 0))
 }
 
-func spawnChild(containerID string) {
+func prepareAndExecuteContainer(containerID string) {
 
 	/* Setup the network namespace  */
 	cmd := &exec.Cmd{
@@ -102,7 +103,7 @@ func spawnChild(containerID string) {
 	}
 	cmd.Run()
 
-	/* Setup the virtual interface  */
+	/* Namespace the virtual interface  */
 	cmd = &exec.Cmd{
 		Path: "/proc/self/exe",
 		Args: []string{"/proc/self/exe", "fence-veth", containerID},
@@ -163,8 +164,9 @@ func initContainer(src string)  {
 	if err := setupVirtualEthOnHost(containerID); err != nil {
 		log.Fatalf("Unable to setup Veth0 on host: %v", err)
 	}
-	spawnChild(containerID)
+	prepareAndExecuteContainer(containerID)
 	log.Printf("Container done.\n")
 	unmountNetworkNamespace(containerID)
 	unmountContainerFs(containerID)
+	removeCGroups(containerID)
 }
