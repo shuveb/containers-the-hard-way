@@ -35,7 +35,7 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
-func createDirsIfDontExist(dirs []string) (err error){
+func createDirsIfDontExist(dirs []string) error {
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			if err = os.MkdirAll(dir, 0755); err != nil {
@@ -72,7 +72,7 @@ func getGockerNetNsPath() string {
 	return gockerNetNsPath
 }
 
-func copyFile(src, dst string) (err error) {
+func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -87,10 +87,10 @@ func copyFile(src, dst string) (err error) {
 	if _, err := io.Copy(out, in); err != nil {
 		return err
 	}
-	return
+	return nil
 }
 
-func parseManifest(manifestPath string, mani *manifest) (err error) {
+func parseManifest(manifestPath string, mani *manifest) error {
 	data, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
 		return err
@@ -100,5 +100,5 @@ func parseManifest(manifestPath string, mani *manifest) (err error) {
 		return err
 	}
 
-	return
+	return nil
 }

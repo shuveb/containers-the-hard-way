@@ -17,7 +17,7 @@ func usage() {
 }
 
 func main() {
-	options := []string{"run", "child-mode", "setup-netns", "fence-veth", "setup-veth"}
+	options := []string{"run", "child-mode", "setup-netns", "fence-veth", "setup-veth", "ps", "exec"}
 	if len(os.Args) < 2 || !stringInSlice(os.Args[1], options) {
 		usage()
 		os.Exit(1)
@@ -55,6 +55,8 @@ func main() {
 		setupContainerNetworkInterfaceStep1(os.Args[2])
 	case "setup-veth":
 		setupContainerNetworkInterfaceStep2(os.Args[2])
+	case "ps":
+		printRunningContainers()
 	default:
 		usage()
 	}
