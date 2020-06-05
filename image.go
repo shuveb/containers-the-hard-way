@@ -44,6 +44,19 @@ func getManifestPathForImage(imageShaHex string) string {
 	return getBasePathForImage(imageShaHex) + "/manifest.json"
 }
 
+func getImageAndTagForHash(imageShaHash string) (string, string) {
+	idb := imagesDB{}
+	parseImagesMetadata(&idb)
+	for image,versions := range idb {
+		for version, hash := range versions {
+			if hash == imageShaHash {
+				return image, version
+			}
+		}
+	}
+	return "", ""
+}
+
 func isImageDownloadRequired(imgName string, tagName string) (bool, string) {
 	idb := imagesDB{}
 	parseImagesMetadata(&idb)

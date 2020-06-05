@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type runningContainerInfo struct {
@@ -14,6 +15,43 @@ type runningContainerInfo struct {
 	image string
 	command string
 	pid int
+}
+
+func getDistribution(containerID string) (string, error) {
+	var lines []string
+	file, err := os.Open("/proc/mounts")
+	if err != nil {
+		fmt.Println("Unable to read /proc/mounts")
+		return "", err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	for _, line := range lines {
+		if strings.Contains(line, containerID) {
+			parts := strings.Split(line, " ")
+			for _, part := range parts {
+				if strings.Contains(part, "lowerdir=") {
+					options := strings.Split(part, ",")
+					for _, option := range options {
+						if strings.Contains(option, "lowerdir=") {
+							imagesPath := getGockerImagesPath()
+							leaderString := "lowerdir=" + imagesPath + "/"
+							trailerString := option[len(leaderString):]
+							imageID := trailerString[:12]
+							image, tag := getImageAndTagForHash(imageID)
+							return fmt.Sprintf("%s:%s", image, tag), nil
+						}
+					}
+				}
+			}
+		}
+	}
+	return "", nil
 }
 
 func getRunningContainers() ([]runningContainerInfo, error) {
@@ -59,9 +97,10 @@ func getRunningContainers() ([]runningContainerInfo, error) {
 							fmt.Println("Unable to read command link.")
 							return nil, err
 						}
+						image, _ := getDistribution(entry.Name())
 						container := runningContainerInfo{
 							containerId: entry.Name(),
-							image:       "",
+							image:       image,
 							command:     cmd[len(realContainerMntPath):],
 							pid:		 pid,
 						}
@@ -80,8 +119,8 @@ func printRunningContainers() {
 		os.Exit(1)
 	}
 
-	fmt.Println("CONTAINER ID\tIMAGE\tCOMMAND")
+	fmt.Println("CONTAINER ID\tIMAGE\t\tCOMMAND")
 	for _, container := range containers {
-		fmt.Printf("%s\t\t%s", container.containerId, container.command)
+		fmt.Printf("%s\t%s\t%s\n", container.containerId, container.image, container.command)
 	}
 }
