@@ -57,7 +57,19 @@ func getImageAndTagForHash(imageShaHash string) (string, string) {
 	return "", ""
 }
 
-func isImageDownloadRequired(imgName string, tagName string) (bool, string) {
+func imageExistsByHash(imageShaHex string) (string, string) {
+	idb := imagesDB{}
+	parseImagesMetadata(&idb)
+	for imgName, avlImages := range idb {
+		for imgTag, imgHash := range avlImages {
+			if imgHash == imageShaHex {
+				return imgName, imgTag
+			}
+		}
+	}
+	return "", ""
+}
+func imageExistByTag(imgName string, tagName string) (bool, string) {
 	idb := imagesDB{}
 	parseImagesMetadata(&idb)
 	for k, v := range idb {
@@ -166,7 +178,7 @@ func getImageNameAndTag(src string) (string, string) {
 
 func downloadImageIfRequired(src string) string {
 	imgName, tagName := getImageNameAndTag(src)
-	if downloadRequired, imageShaHex := isImageDownloadRequired(imgName, tagName); !downloadRequired {
+	if downloadRequired, imageShaHex := imageExistByTag(imgName, tagName); !downloadRequired {
 		/* Setup the image we want to pull */
 		log.Printf("Downloading metadata for %s:%s, please wait...", imgName, tagName)
 		img, err := crane.Pull(strings.Join([]string{imgName, tagName}, ":"))
@@ -177,13 +189,22 @@ func downloadImageIfRequired(src string) string {
 		manifest, _ := img.Manifest()
 		imageShaHex = manifest.Config.Digest.Hex[:12]
 		log.Printf("imageHash: %v\n", imageShaHex)
-
-		log.Println("Image doesn't exist. Downloading...")
-		downloadImage(img, imageShaHex, src)
-		untarFile(imageShaHex)
-		processLayerTarballs(imageShaHex)
-		storeImageMetadata(imgName, tagName, imageShaHex)
-		return imageShaHex
+		log.Println("Checking if image exists under another name...")
+		/* Identify cases where ubuntu:latest could be the same as ubuntu:20.04*/
+		altImgName, altImgTag := imageExistsByHash(imageShaHex)
+		if len(altImgName) > 0 && len(altImgTag) > 0 {
+			log.Printf("The image you requested %s:%s is the same as %s:%s\n",
+				imgName, tagName, altImgName, altImgTag)
+			storeImageMetadata(imgName, tagName, imageShaHex)
+			return imageShaHex
+		} else {
+			log.Println("Image doesn't exist. Downloading...")
+			downloadImage(img, imageShaHex, src)
+			untarFile(imageShaHex)
+			processLayerTarballs(imageShaHex)
+			storeImageMetadata(imgName, tagName, imageShaHex)
+			return imageShaHex
+		}
 	} else {
 		log.Println("Image already exists. Not downloading.")
 		return imageShaHex
