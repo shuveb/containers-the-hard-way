@@ -17,6 +17,14 @@ type runningContainerInfo struct {
 	pid int
 }
 
+/*
+	This isn't a great implementation and can possibly be simplified
+	using regex. But for now, here we are. This function gets the
+	current mount points, figures out which image is mounted for a
+	given container ID, looks it up in our images database which we
+	maintain and returns the image and tag information.
+*/
+
 func getDistribution(containerID string) (string, error) {
 	var lines []string
 	file, err := os.Open("/proc/mounts")
@@ -53,6 +61,23 @@ func getDistribution(containerID string) (string, error) {
 	}
 	return "", nil
 }
+
+/*
+	Get the list of running container IDs.
+
+	Implementation logic:
+	- Gocker creates multiple folders in the /sys/fs/cgroup hierarchy
+	- For example, for setting cpu limits, gocker uses /sys/fs/cgroup/cpu/gocker
+	- Inside that folder are folders one each for currently running containers
+	- Those folder names are the container IDs we create.
+	- This function does not stop here. It gathers more information about running
+		containers. See struct runningContainerInfo for details.
+	- Inside each of those folders is a "cgroup.procs" file that has the list
+		of PIDs of processes inside of that container. From the PID, we can
+		get the mounted path from which the process was started. From that
+		mounted path, we can get the image of the containers since containers
+		are mounted via the overlay file system.
+*/
 
 func getRunningContainers() ([]runningContainerInfo, error) {
 	var containers []runningContainerInfo

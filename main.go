@@ -57,6 +57,8 @@ func main() {
 		setupContainerNetworkInterfaceStep2(os.Args[2])
 	case "ps":
 		printRunningContainers()
+	case "exec":
+		execInContainer(os.Args[2])
 	default:
 		usage()
 	}
