@@ -31,3 +31,11 @@ func removeCGroups(containerID string) {
 		doOrDieWithMsg(os.Remove(cgroupDir), "Unable to remove cgroup dir")
 	}
 }
+
+func setMemoryLimit(containerID string, limitMB int) {
+	filePath := "/sys/fs/cgroup/memory/gocker/" + containerID + "/memory.limit_in_bytes"
+	doOrDieWithMsg(ioutil.WriteFile(filePath,
+				[]byte(strconv.Itoa(limitMB*1024*1024)), 0644),
+				"Unable to write memory limit")
+
+}
