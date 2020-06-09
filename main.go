@@ -13,9 +13,9 @@ func usage() {
 	fmt.Println("Welcome to Gocker!")
 	fmt.Println("Supported commands:")
 	fmt.Println("gocker run [--mem] [--swap] [--pids] [--cpus] <image> <command>")
+	fmt.Println("gocker exec <container-id> <command>")
 	fmt.Println("gocker images")
 	fmt.Println("gocker ps")
-	fmt.Println("gocker run <container-id> <command>")
 }
 
 func main() {

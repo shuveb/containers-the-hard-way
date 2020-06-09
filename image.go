@@ -44,6 +44,12 @@ func getManifestPathForImage(imageShaHex string) string {
 	return getBasePathForImage(imageShaHex) + "/manifest.json"
 }
 
+func deleteTempImageFiles(imageShaHash string) {
+	tmpPath := getGockerTempPath() + "/" + imageShaHash
+	doOrDieWithMsg(os.RemoveAll(tmpPath),
+		"Unable to remove temporary image files")
+}
+
 func getImageAndTagForHash(imageShaHash string) (string, string) {
 	idb := imagesDB{}
 	parseImagesMetadata(&idb)
@@ -152,8 +158,12 @@ func storeImageMetadata(image string, tag string, imageShaHex string) {
 	ientry := imageEntries{}
 	parseImagesMetadata(&idb)
 	log.Printf("Images Metadata: %v\n", idb)
+	if idb[image] != nil {
+		ientry = idb[image]
+	}
 	ientry[tag] = imageShaHex
 	idb[image] = ientry
+
 	fileBytes, err := json.Marshal(idb)
 	if err != nil {
 		log.Fatalf("Unable to marshall images data: %v\n", err)
@@ -203,6 +213,7 @@ func downloadImageIfRequired(src string) string {
 			untarFile(imageShaHex)
 			processLayerTarballs(imageShaHex)
 			storeImageMetadata(imgName, tagName, imageShaHex)
+			deleteTempImageFiles(imageShaHex)
 			return imageShaHex
 		}
 	} else {

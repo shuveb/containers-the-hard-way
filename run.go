@@ -68,7 +68,10 @@ func unmountContainerFs(containerID string) {
 		log.Fatalf("Uable to mount container file system: %v at %s", err, mountedPath)
 	}
 }
-
+func copyNameserverConfig(containerID string) error {
+	return copyFile("/etc/resolv.conf",
+		getContainerFSHome(containerID) + "/mnt/etc/resolv.conf")
+}
 /*
 	Called if this program is executed with "child-mode" as the first argument
 */
@@ -83,6 +86,7 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64, containerID
 	doOrDieWithMsg(joinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
 	createCGroups(containerID)
 	configureCGroups(containerID, mem, swap, pids, cpus)
+	doOrDieWithMsg(copyNameserverConfig(containerID), "Unable to copy resolve.conf")
 	doOrDieWithMsg(syscall.Chroot(mntPath), "Unable to chroot")
 	doOrDieWithMsg(os.Chdir("/"), "Unable to change directory")
 	createDirsIfDontExist([]string{"/proc"})
