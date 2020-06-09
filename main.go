@@ -15,11 +15,12 @@ func usage() {
 	fmt.Println("gocker run [--mem] [--swap] [--pids] [--cpus] <image> <command>")
 	fmt.Println("gocker exec <container-id> <command>")
 	fmt.Println("gocker images")
+	fmt.Println("gocker rmi <image-id>")
 	fmt.Println("gocker ps")
 }
 
 func main() {
-	options := []string{"run", "child-mode", "setup-netns", "fence-veth", "setup-veth", "ps", "exec", "images"}
+	options := []string{"run", "child-mode", "setup-netns", "fence-veth", "setup-veth", "ps", "exec", "images", "rmi"}
 
 	if len(os.Args) < 2 || !stringInSlice(os.Args[1], options) {
 		usage()
@@ -91,6 +92,12 @@ func main() {
 		execInContainer(os.Args[2])
 	case "images":
 		printAvailableImages()
+	case "rmi":
+		if len(os.Args) < 3 {
+			usage()
+			os.Exit(1)
+		}
+		deleteImageByHash(os.Args[2])
 	default:
 		usage()
 	}

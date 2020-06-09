@@ -20,16 +20,16 @@ type manifest []struct {
 /*
 {
 	"ubuntu" : {
-					"18.04": "/path/to/image/home",
-					"18.10": "/path/to/image/home",
-					"19.04": "/path/to/image/home",
-					"19.10": "/path/to/image/home",
+					"18.04": "[image-hash]",
+					"18.10": "[image-hash]",
+					"19.04": "[image-hash]",
+					"19.10": "[image-hash]",
 				},
 	"centos" : {
-					"6.0": "/path/to/image/home",
-					"6.1": "/path/to/image/home",
-					"6.2": "/path/to/image/home",
-					"7.0": "/path/to/image/home",
+					"6.0": "[image-hash]",
+					"6.1": "[image-hash]",
+					"6.2": "[image-hash]",
+					"7.0": "[image-hash]",
 				}
 }
 */
@@ -76,6 +76,7 @@ func imageExistsByHash(imageShaHex string) (string, string) {
 	}
 	return "", ""
 }
+
 func imageExistByTag(imgName string, tagName string) (bool, string) {
 	idb := imagesDB{}
 	parseImagesMetadata(&idb)
@@ -154,6 +155,17 @@ func parseImagesMetadata(idb *imagesDB)  {
 	}
 }
 
+func marshalImageMetadata(idb imagesDB) {
+	fileBytes, err := json.Marshal(idb)
+	if err != nil {
+		log.Fatalf("Unable to marshall images data: %v\n", err)
+	}
+	imagesDBPath := getGockerImagesPath() + "/" + "images.json"
+	if err := ioutil.WriteFile(imagesDBPath, fileBytes, 0644); err != nil {
+		log.Fatalf("Unable to save images DB: %v\n", err)
+	}
+}
+
 func storeImageMetadata(image string, tag string, imageShaHex string) {
 	idb := imagesDB{}
 	ientry := imageEntries{}
@@ -165,14 +177,51 @@ func storeImageMetadata(image string, tag string, imageShaHex string) {
 	ientry[tag] = imageShaHex
 	idb[image] = ientry
 
-	fileBytes, err := json.Marshal(idb)
+	marshalImageMetadata(idb)
+}
+
+func removeImageMetadata(imageShaHex string) {
+	idb := imagesDB{}
+	ientries := imageEntries{}
+	parseImagesMetadata(&idb)
+	imgName, _ := imageExistsByHash(imageShaHex)
+	if len(imgName) == 0 {
+		log.Fatalf("Could not get image details")
+	}
+	ientries = idb[imgName]
+	for tag, hash := range ientries {
+		if hash == imageShaHex {
+			delete(ientries, tag)
+		}
+	}
+	log.Printf("Final images: %v\n", ientries)
+	idb[imgName] = ientries
+	log.Printf("Final images metadata: %v\n", idb)
+	marshalImageMetadata(idb)
+}
+
+func deleteImageByHash(imageShaHex string) {
+	// Ensure that no running container is using the image we're setting
+	// out to delete. There is a race condition possible here, but we use
+	// the ostrich algorithm
+	imgName, imgTag := getImageAndTagForHash(imageShaHex)
+	if len(imgName) == 0 {
+		log.Fatalf("No such image")
+	}
+	containers, err := getRunningContainers()
 	if err != nil {
-		log.Fatalf("Unable to marshall images data: %v\n", err)
+		log.Fatalf("Unable to get running containers list: %v\n", err)
 	}
-	imagesDBPath := getGockerImagesPath() + "/" + "images.json"
-	if err := ioutil.WriteFile(imagesDBPath, fileBytes, 0644); err != nil {
-		log.Fatalf("Unable to save images DB: %v\n", err)
+	for _, container := range containers {
+		if container.image == imgName + ":" + imgTag {
+			log.Fatalf("Cannot delete image becuase it is in use by: %s",
+						container.containerId)
+		}
 	}
+
+	doOrDieWithMsg(os.RemoveAll(getGockerImagesPath() + "/" + imageShaHex),
+		"Unable to remove image directory")
+	removeImageMetadata(imageShaHex)
 }
 
 func printAvailableImages() {
