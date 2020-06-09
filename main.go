@@ -19,7 +19,7 @@ func usage() {
 }
 
 func main() {
-	options := []string{"run", "child-mode", "setup-netns", "fence-veth", "setup-veth", "ps", "exec"}
+	options := []string{"run", "child-mode", "setup-netns", "fence-veth", "setup-veth", "ps", "exec", "images"}
 
 	if len(os.Args) < 2 || !stringInSlice(os.Args[1], options) {
 		usage()
@@ -89,6 +89,8 @@ func main() {
 		printRunningContainers()
 	case "exec":
 		execInContainer(os.Args[2])
+	case "images":
+		printAvailableImages()
 	default:
 		usage()
 	}

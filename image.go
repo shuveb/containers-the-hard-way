@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"io/ioutil"
@@ -171,6 +172,18 @@ func storeImageMetadata(image string, tag string, imageShaHex string) {
 	imagesDBPath := getGockerImagesPath() + "/" + "images.json"
 	if err := ioutil.WriteFile(imagesDBPath, fileBytes, 0644); err != nil {
 		log.Fatalf("Unable to save images DB: %v\n", err)
+	}
+}
+
+func printAvailableImages() {
+	idb := imagesDB{}
+	parseImagesMetadata(&idb)
+	fmt.Printf("IMAGE\t             TAG\t   ID\n")
+	for image, details := range idb {
+		fmt.Println(image)
+		for tag, hash := range details {
+			fmt.Printf("\t%16s %s\n", tag, hash)
+		}
 	}
 }
 
