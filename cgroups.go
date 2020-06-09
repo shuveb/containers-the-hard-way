@@ -32,10 +32,29 @@ func removeCGroups(containerID string) {
 	}
 }
 
-func setMemoryLimit(containerID string, limitMB int) {
-	filePath := "/sys/fs/cgroup/memory/gocker/" + containerID + "/memory.limit_in_bytes"
-	doOrDieWithMsg(ioutil.WriteFile(filePath,
+func setMemoryLimit(containerID string, limitMB int, swapLimitInMB int) {
+	memFilePath := "/sys/fs/cgroup/memory/gocker/" + containerID +
+											"/memory.limit_in_bytes"
+	swapFilePath := "/sys/fs/cgroup/memory/gocker/" + containerID +
+		"/memory.memsw.limit_in_bytes"
+	doOrDieWithMsg(ioutil.WriteFile(memFilePath,
 				[]byte(strconv.Itoa(limitMB*1024*1024)), 0644),
 				"Unable to write memory limit")
 
+	/*
+		memory.memsw.limit_in_bytes contains the total amount of memory the
+		control group can consume: this includes both swap and RAM.
+		If if memory.limit_in_bytes is specified but memory.memsw.limit_in_bytes
+		is left untouched, processes in the control group will continue to
+		consume swap space.
+	*/
+	if swapLimitInMB >= 0 {
+		doOrDieWithMsg(ioutil.WriteFile(swapFilePath,
+			[]byte(strconv.Itoa((limitMB*1024*1024)+(swapLimitInMB*1024*1024))),
+			0644), "Unable to write memory limit")
+	}
+}
+
+func configureCGroups(containerID string, mem int, swap int, pids int, cpus float64) {
+	setMemoryLimit(containerID, mem, swap)
 }

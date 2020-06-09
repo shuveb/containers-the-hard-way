@@ -72,7 +72,7 @@ func unmountContainerFs(containerID string) {
 /*
 	Called if this program is executed with "child-mode" as the first argument
 */
-func execContainerCommand(mem int, pids int, cpuds float64, containerID string, args []string) {
+func execContainerCommand(mem int, swap int, pids int, cpus float64, containerID string, args []string) {
 	mntPath := getContainerFSHome(containerID) + "/mnt"
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin = os.Stdin
@@ -82,6 +82,7 @@ func execContainerCommand(mem int, pids int, cpuds float64, containerID string, 
 	doOrDieWithMsg(syscall.Sethostname([]byte(containerID)), "Unable to set hostname")
 	doOrDieWithMsg(joinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
 	createCGroups(containerID)
+	configureCGroups(containerID, mem, swap, pids, cpus)
 	doOrDieWithMsg(syscall.Chroot(mntPath), "Unable to chroot")
 	doOrDieWithMsg(os.Chdir("/"), "Unable to change directory")
 	createDirsIfDontExist([]string{"/proc"})
@@ -93,7 +94,7 @@ func execContainerCommand(mem int, pids int, cpuds float64, containerID string, 
 	doOrDie(syscall.Unmount("/tmp", 0))
 }
 
-func prepareAndExecuteContainer(mem int, pids int, cpus float64, containerID string, cmdArgs []string) {
+func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64, containerID string, cmdArgs []string) {
 
 	/* Setup the network namespace  */
 	cmd := &exec.Cmd{
@@ -143,6 +144,9 @@ func prepareAndExecuteContainer(mem int, pids int, cpus float64, containerID str
 	if mem > 0 {
 		opts = append(opts, "--mem=" + strconv.Itoa(mem))
 	}
+	if swap >= 0 {
+		opts = append(opts, "--swap=" + strconv.Itoa(swap))
+	}
 	if pids > 0 {
 		opts = append(opts, "--pids=" + strconv.Itoa(pids))
 	}
@@ -168,7 +172,7 @@ func prepareAndExecuteContainer(mem int, pids int, cpus float64, containerID str
 	doOrDie(cmd.Run())
 }
 
-func initContainer(mem int, pids int, cpus float64, src string, args []string)  {
+func initContainer(mem int, swap int, pids int, cpus float64, src string, args []string)  {
 	containerID := createContainerID()
 	log.Printf("New container ID: %s\n", containerID)
 	imageShaHex := downloadImageIfRequired(src)
@@ -178,7 +182,7 @@ func initContainer(mem int, pids int, cpus float64, src string, args []string)  
 	if err := setupVirtualEthOnHost(containerID); err != nil {
 		log.Fatalf("Unable to setup Veth0 on host: %v", err)
 	}
-	prepareAndExecuteContainer(mem, pids, cpus, containerID, args)
+	prepareAndExecuteContainer(mem, swap, pids, cpus, containerID, args)
 	log.Printf("Container done.\n")
 	unmountNetworkNamespace(containerID)
 	unmountContainerFs(containerID)

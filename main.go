@@ -12,7 +12,7 @@ import (
 func usage() {
 	fmt.Println("Welcome to Gocker!")
 	fmt.Println("Supported commands:")
-	fmt.Println("gocker run <image> <command>")
+	fmt.Println("gocker run [--mem] [--swap] [--pids] [--cpus] <image> <command>")
 	fmt.Println("gocker images")
 	fmt.Println("gocker ps")
 	fmt.Println("gocker run <container-id> <command>")
@@ -44,7 +44,8 @@ func main() {
 		fs := flag.FlagSet{}
 		fs.ParseErrorsWhitelist.UnknownFlags = true
 
-		mem := fs.Int("mem", -1, "Memory to allocate in MB")
+		mem := fs.Int("mem", -1, "Max RAM to allow in MB")
+		swap := fs.Int("swap", -1, "Max swap to allow in MB")
 		pids := fs.Int("pids", -1, "Number of max processes to allow")
 		cpus := fs.Float64("cpus", -1, "Number of CPU cores to restrict to")
 		if err := fs.Parse(os.Args[2:]); err != nil {
@@ -53,7 +54,7 @@ func main() {
 		if len(fs.Args()) < 2 {
 			log.Fatalf("Please pass image name and command to run")
 		}
-		fmt.Println("run options:", *mem, *pids, *cpus, fs.Args())
+		fmt.Println("run options:", *mem, *swap, *pids, *cpus, fs.Args())
 		/* Create and setup the gocker0 network bridge we need */
 		if isUp, _ := isGockerBridgeUp(); !isUp {
 			log.Println("Bringing up the gocker0 bridge...")
@@ -61,12 +62,13 @@ func main() {
 				log.Fatalf("Unable to create gocker0 bridge: %v", err)
 			}
 		}
-		initContainer(*mem, *pids, *cpus, fs.Args()[0], fs.Args()[1:])
+		initContainer(*mem, *swap, *pids, *cpus, fs.Args()[0], fs.Args()[1:])
 	case "child-mode":
 		fs := flag.FlagSet{}
 		fs.ParseErrorsWhitelist.UnknownFlags = true
 
-		mem := fs.Int("mem", -1, "Memory to allocate in MB")
+		mem := fs.Int("mem", -1, "Max RAM to allow in  MB")
+		swap := fs.Int("swap", -1, "Max swap to allow in  MB")
 		pids := fs.Int("pids", -1, "Number of max processes to allow")
 		cpus := fs.Float64("cpus", -1, "Number of CPU cores to restrict to")
 		if err := fs.Parse(os.Args[2:]); err != nil {
@@ -75,8 +77,8 @@ func main() {
 		if len(fs.Args()) < 2 {
 			log.Fatalf("Please pass image name and command to run")
 		}
-		fmt.Println("child-mode options:", *mem, *pids, *cpus, fs.Args())
-		execContainerCommand(*mem, *pids, *cpus, fs.Args()[0], fs.Args()[1:])
+		fmt.Println("child-mode options:", *mem, *swap, *pids, *cpus, fs.Args())
+		execContainerCommand(*mem, *swap, *pids, *cpus, fs.Args()[0], fs.Args()[1:])
 	case "setup-netns":
 		setupNewNetworkNamespace(os.Args[2])
 	case "fence-veth":
