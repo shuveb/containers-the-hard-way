@@ -56,5 +56,7 @@ func setMemoryLimit(containerID string, limitMB int, swapLimitInMB int) {
 }
 
 func configureCGroups(containerID string, mem int, swap int, pids int, cpus float64) {
-	setMemoryLimit(containerID, mem, swap)
+	if mem > 0 {
+		setMemoryLimit(containerID, mem, swap)
+	}
 }

@@ -223,7 +223,11 @@ func removeImageMetadata(imageShaHex string) {
 		}
 	}
 	log.Printf("Final images: %v\n", ientries)
-	idb[imgName] = ientries
+	if len(ientries) == 0 {
+		delete(idb, imgName)
+	} else {
+		idb[imgName] = ientries
+	}
 	log.Printf("Final images metadata: %v\n", idb)
 	marshalImageMetadata(idb)
 }
