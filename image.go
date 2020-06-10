@@ -16,8 +16,17 @@ type manifest []struct {
 	RepoTags []string
 	Layers []string
 }
+type imageConfigDetails struct {
+	Env []string	`json:"Env"`
+	Cmd []string	`json:"Cmd"`
+}
+type imageConfig struct {
+	Config imageConfigDetails `json:"config"`
+}
 
 /*
+This is the format of our imageDB file where we store the
+list of images we have on the system.
 {
 	"ubuntu" : {
 					"18.04": "[image-hash]",
@@ -43,6 +52,10 @@ func getBasePathForImage(imageShaHex string) string {
 
 func getManifestPathForImage(imageShaHex string) string {
 	return getBasePathForImage(imageShaHex) + "/manifest.json"
+}
+
+func getConfigPathForImage(imageShaHex string) string {
+	return getBasePathForImage(imageShaHex) + "/" + imageShaHex + ".json"
 }
 
 func deleteTempImageFiles(imageShaHash string) {
@@ -111,9 +124,10 @@ func untarFile(imageShaHex string) {
 	}
 }
 
-func processLayerTarballs(imageShaHex string) {
+func processLayerTarballs(imageShaHex string, fullImageHex string) {
 	tmpPathDir := getGockerTempPath() + "/" + imageShaHex
 	pathManifest := tmpPathDir + "/manifest.json"
+	pathConfig := tmpPathDir + "/" + fullImageHex + ".json"
 
 	mani := manifest{}
 	parseManifest(pathManifest, &mani)
@@ -138,6 +152,20 @@ func processLayerTarballs(imageShaHex string) {
 	}
 	/* Copy the manifest file for reference later */
 	copyFile(pathManifest, getManifestPathForImage(imageShaHex))
+	copyFile(pathConfig, getConfigPathForImage(imageShaHex))
+}
+
+func parseContainerConfig(imageShaHex string) imageConfig {
+	imagesConfigPath := getConfigPathForImage(imageShaHex)
+	data, err := ioutil.ReadFile(imagesConfigPath)
+	if err != nil {
+		log.Fatalf("Could not read image config file")
+	}
+	imgConfig := imageConfig{}
+	if err := json.Unmarshal(data, &imgConfig); err != nil {
+		log.Fatalf("Unable to parse image config data!")
+	}
+	return imgConfig
 }
 
 func parseImagesMetadata(idb *imagesDB)  {
@@ -273,7 +301,7 @@ func downloadImageIfRequired(src string) string {
 			log.Println("Image doesn't exist. Downloading...")
 			downloadImage(img, imageShaHex, src)
 			untarFile(imageShaHex)
-			processLayerTarballs(imageShaHex)
+			processLayerTarballs(imageShaHex, manifest.Config.Digest.Hex)
 			storeImageMetadata(imgName, tagName, imageShaHex)
 			deleteTempImageFiles(imageShaHex)
 			return imageShaHex

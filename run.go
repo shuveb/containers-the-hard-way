@@ -75,13 +75,15 @@ func copyNameserverConfig(containerID string) error {
 /*
 	Called if this program is executed with "child-mode" as the first argument
 */
-func execContainerCommand(mem int, swap int, pids int, cpus float64, containerID string, args []string) {
+func execContainerCommand(mem int, swap int, pids int, cpus float64,
+		containerID string, imageShaHex string, args []string) {
 	mntPath := getContainerFSHome(containerID) + "/mnt"
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	imgConfig := parseContainerConfig(imageShaHex)
 	doOrDieWithMsg(syscall.Sethostname([]byte(containerID)), "Unable to set hostname")
 	doOrDieWithMsg(joinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
 	createCGroups(containerID)
@@ -93,12 +95,14 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64, containerID
 	doOrDieWithMsg(syscall.Mount("proc", "/proc", "proc", 0, ""), "Unable to mount proc")
 	doOrDieWithMsg(syscall.Mount("tmpfs", "/tmp", "tmpfs", 0, ""), "Unable to mount tmpfs")
 	setupLocalInterface()
+	cmd.Env = imgConfig.Config.Env
 	cmd.Run()
 	doOrDie(syscall.Unmount("/proc", 0))
 	doOrDie(syscall.Unmount("/tmp", 0))
 }
 
-func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64, containerID string, cmdArgs []string) {
+func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
+					containerID string, imageShaHex string, cmdArgs []string) {
 
 	/* Setup the network namespace  */
 	cmd := &exec.Cmd{
@@ -157,6 +161,7 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64, conta
 	if cpus > 0 {
 		opts = append(opts, "--cpus=" + strconv.FormatFloat(cpus, 'f', 1, 64))
 	}
+	opts = append(opts, "--img=" + imageShaHex)
 	fmt.Println("args:", opts)
 	args := append([]string{containerID}, cmdArgs...)
 	args = append(opts, args...)
@@ -186,7 +191,7 @@ func initContainer(mem int, swap int, pids int, cpus float64, src string, args [
 	if err := setupVirtualEthOnHost(containerID); err != nil {
 		log.Fatalf("Unable to setup Veth0 on host: %v", err)
 	}
-	prepareAndExecuteContainer(mem, swap, pids, cpus, containerID, args)
+	prepareAndExecuteContainer(mem, swap, pids, cpus, containerID, imageShaHex, args)
 	log.Printf("Container done.\n")
 	unmountNetworkNamespace(containerID)
 	unmountContainerFs(containerID)

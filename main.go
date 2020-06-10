@@ -72,14 +72,15 @@ func main() {
 		swap := fs.Int("swap", -1, "Max swap to allow in  MB")
 		pids := fs.Int("pids", -1, "Number of max processes to allow")
 		cpus := fs.Float64("cpus", -1, "Number of CPU cores to restrict to")
+		image := fs.String("img", "", "Container image")
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			fmt.Println("Error parsing: ", err)
 		}
 		if len(fs.Args()) < 2 {
 			log.Fatalf("Please pass image name and command to run")
 		}
-		fmt.Println("child-mode options:", *mem, *swap, *pids, *cpus, fs.Args())
-		execContainerCommand(*mem, *swap, *pids, *cpus, fs.Args()[0], fs.Args()[1:])
+		fmt.Println("child-mode options:", *mem, *swap, *pids, *cpus, *image, fs.Args())
+		execContainerCommand(*mem, *swap, *pids, *cpus, fs.Args()[0], *image, fs.Args()[1:])
 	case "setup-netns":
 		setupNewNetworkNamespace(os.Args[2])
 	case "fence-veth":
