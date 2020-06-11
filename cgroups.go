@@ -80,11 +80,24 @@ func setCpuLimit(containerID string, limit float64)  {
 
 }
 
+func setPidsLimit(containerID string, limit int)  {
+	maxProcsPath := "/sys/fs/cgroup/pids/gocker/" + containerID +
+		"/pids.max"
+
+	doOrDieWithMsg(ioutil.WriteFile(maxProcsPath,
+		[]byte(strconv.Itoa(limit)), 0644),
+		"Unable to write pids limit")
+
+}
+
 func configureCGroups(containerID string, mem int, swap int, pids int, cpus float64) {
 	if mem > 0 {
 		setMemoryLimit(containerID, mem, swap)
 	}
 	if cpus > 0 {
 		setCpuLimit(containerID, cpus)
+	}
+	if pids > 0 {
+		setPidsLimit(containerID, pids)
 	}
 }
