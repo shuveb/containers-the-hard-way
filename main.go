@@ -20,7 +20,7 @@ func usage() {
 }
 
 func main() {
-	options := []string{"run", "child-mode", "setup-netns", "fence-veth", "setup-veth", "ps", "exec", "images", "rmi"}
+	options := []string{"run", "child-mode", "setup-netns", "setup-veth", "ps", "exec", "images", "rmi"}
 
 	if len(os.Args) < 2 || !stringInSlice(os.Args[1], options) {
 		usage()
@@ -83,9 +83,8 @@ func main() {
 		execContainerCommand(*mem, *swap, *pids, *cpus, fs.Args()[0], *image, fs.Args()[1:])
 	case "setup-netns":
 		setupNewNetworkNamespace(os.Args[2])
-	case "fence-veth":
-		setupContainerNetworkInterfaceStep1(os.Args[2])
 	case "setup-veth":
+		setupContainerNetworkInterfaceStep1(os.Args[2])
 		setupContainerNetworkInterfaceStep2(os.Args[2])
 	case "ps":
 		printRunningContainers()

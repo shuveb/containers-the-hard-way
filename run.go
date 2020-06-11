@@ -69,8 +69,20 @@ func unmountContainerFs(containerID string) {
 	}
 }
 func copyNameserverConfig(containerID string) error {
-	return copyFile("/etc/resolv.conf",
-		getContainerFSHome(containerID) + "/mnt/etc/resolv.conf")
+	resolvFilePaths := []string{
+		"/var/run/systemd/resolve/resolv.conf",
+		"/etc/gockerresolv.conf",
+		"/etc/resolv.conf",
+	}
+	for _, resolvFilePath := range resolvFilePaths {
+		if _, err := os.Stat(resolvFilePath); os.IsNotExist(err) {
+			continue
+		} else {
+			return copyFile(resolvFilePath,
+				getContainerFSHome(containerID) + "/mnt/etc/resolv.conf")
+		}
+	}
+	return nil
 }
 /*
 	Called if this program is executed with "child-mode" as the first argument
@@ -113,16 +125,7 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 	}
 	cmd.Run()
 
-	/* Namespace the virtual interface  */
-	cmd = &exec.Cmd{
-		Path: "/proc/self/exe",
-		Args: []string{"/proc/self/exe", "fence-veth", containerID},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-	cmd.Run()
-
-	/* Setup the virtual interface  */
+	/* Namespace and setup the virtual interface  */
 	cmd = &exec.Cmd{
 		Path: "/proc/self/exe",
 		Args: []string{"/proc/self/exe", "setup-veth", containerID},
