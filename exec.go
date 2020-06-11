@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -50,12 +51,24 @@ func execInContainer(containerId string)  {
 	unix.Setns(int(pidFd.Fd()), syscall.CLONE_NEWPID)
 	unix.Setns(int(utsFd.Fd()), syscall.CLONE_NEWUTS)
 
+	containerConfig, err := getRunningContainerInfoForId(containerId)
+	if err != nil {
+		log.Fatalf("Unable to get container configuration")
+	}
+	imageNameAndTag := strings.Split(containerConfig.image, ":")
+	exists, imageShaHex := imageExistByTag(imageNameAndTag[0], imageNameAndTag[1])
+	if !exists {
+		log.Fatalf("Unable to get image details")
+	}
+	imgConfig := parseContainerConfig(imageShaHex)
 	containerMntPath := getGockerContainersPath() + "/" + containerId + "/fs/mnt"
+	createCGroups(containerId, false)
 	doOrDieWithMsg(syscall.Chroot(containerMntPath), "Unable to chroot")
 	os.Chdir("/")
 	cmd := exec.Command(os.Args[3], os.Args[4:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Env = imgConfig.Config.Env
 	doOrDieWithMsg(cmd.Run(), "Unable to exec command in container")
 }

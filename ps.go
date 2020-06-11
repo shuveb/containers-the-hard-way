@@ -62,15 +62,60 @@ func getDistribution(containerID string) (string, error) {
 	return "", nil
 }
 
-/*
-	Get the list of running container IDs.
+func getRunningContainerInfoForId(containerID string) (runningContainerInfo, error) {
+	container := runningContainerInfo{}
+	var procs []string
+	basePath := "/sys/fs/cgroup/cpu/gocker"
 
-	Implementation logic:
-	- Gocker creates multiple folders in the /sys/fs/cgroup hierarchy
-	- For example, for setting cpu limits, gocker uses /sys/fs/cgroup/cpu/gocker
+	file, err := os.Open(basePath + "/" + containerID + "/cgroup.procs")
+	if err != nil {
+		fmt.Println("Unable to read cgroup.procs")
+		return container, err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		procs = append(procs, scanner.Text())
+	}
+	if len(procs) > 0 {
+		pid, err := strconv.Atoi(procs[len(procs)-1])
+		if err != nil {
+			fmt.Println("Unable to read PID")
+			return container, err
+		}
+		cmd, err := os.Readlink("/proc/" + strconv.Itoa(pid) + "/exe")
+		containerMntPath := getGockerContainersPath() + "/" + containerID + "/fs/mnt"
+		realContainerMntPath, err := filepath.EvalSymlinks(containerMntPath)
+		if err != nil {
+			fmt.Println("Unable to resolve path")
+			return container, err
+		}
+
+		if err != nil {
+			fmt.Println("Unable to read command link.")
+			return container, err
+		}
+		image, _ := getDistribution(containerID)
+		container = runningContainerInfo{
+			containerId: containerID,
+			image:       image,
+			command:     cmd[len(realContainerMntPath):],
+			pid:         pid,
+		}
+	}
+	return container, nil
+}
+
+	/*
+		Get the list of running container IDs.
+
+		Implementation logic:
+		- Gocker creates multiple folders in the /sys/fs/cgroup hierarchy
+		- For example, for setting cpu limits, gocker uses /sys/fs/cgroup/cpu/gocker
 	- Inside that folder are folders one each for currently running containers
 	- Those folder names are the container IDs we create.
-	- This function does not stop here. It gathers more information about running
+	- getContainerInfoForId() does more work. It gathers more information about running
 		containers. See struct runningContainerInfo for details.
 	- Inside each of those folders is a "cgroup.procs" file that has the list
 		of PIDs of processes inside of that container. From the PID, we can
@@ -81,7 +126,6 @@ func getDistribution(containerID string) (string, error) {
 
 func getRunningContainers() ([]runningContainerInfo, error) {
 	var containers []runningContainerInfo
-	var procs []string
 	basePath := "/sys/fs/cgroup/cpu/gocker"
 
 	entries, err := ioutil.ReadDir(basePath)
@@ -93,42 +137,8 @@ func getRunningContainers() ([]runningContainerInfo, error) {
 		} else {
 			for _, entry := range entries {
 				if entry.IsDir() {
-					file, err := os.Open(basePath + "/" + entry.Name() + "/cgroup.procs")
-					if err != nil {
-						fmt.Println("Unable to read cgroup.procs")
-						return nil, err
-					}
-					defer file.Close()
-					scanner := bufio.NewScanner(file)
-					scanner.Split(bufio.ScanLines)
-					for scanner.Scan() {
-						procs = append(procs, scanner.Text())
-					}
-					if len(procs) > 0 {
-						pid, err :=	strconv.Atoi(procs[len(procs) -1 ])
-						if err != nil {
-							fmt.Println("Unable to read PID")
-							return nil, err
-						}
-						cmd, err := os.Readlink("/proc/" + strconv.Itoa(pid) + "/exe")
-						containerMntPath := getGockerContainersPath() + "/" + entry.Name() + "/fs/mnt"
-						realContainerMntPath, err := filepath.EvalSymlinks(containerMntPath)
-						if err != nil {
-							fmt.Println("Unable to resolve path")
-							return nil, err
-						}
-
-						if err != nil {
-							fmt.Println("Unable to read command link.")
-							return nil, err
-						}
-						image, _ := getDistribution(entry.Name())
-						container := runningContainerInfo{
-							containerId: entry.Name(),
-							image:       image,
-							command:     cmd[len(realContainerMntPath):],
-							pid:		 pid,
-						}
+					container, _ := getRunningContainerInfoForId(entry.Name())
+					if container.pid > 0 {
 						containers = append(containers, container)
 					}
 				}

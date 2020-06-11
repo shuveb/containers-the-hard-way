@@ -1,18 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strconv"
 )
 
-func createCGroups(containerID string) {
+func createCGroups(containerID string, createCGroupDirs bool) {
 	cgroups := []string{"/sys/fs/cgroup/memory/gocker/" + containerID,
 						"/sys/fs/cgroup/pids/gocker/" + containerID,
 						"/sys/fs/cgroup/cpu/gocker/" + containerID}
 
-	doOrDieWithMsg(createDirsIfDontExist(cgroups),
-		"Unable to create cgroup directories")
+	if createCGroupDirs {
+		doOrDieWithMsg(createDirsIfDontExist(cgroups),
+			"Unable to create cgroup directories")
+	}
 
 	for _, cgroupDir := range cgroups {
 		doOrDieWithMsg(ioutil.WriteFile(cgroupDir + "/notify_on_release", []byte("1"), 0700),
@@ -55,8 +59,32 @@ func setMemoryLimit(containerID string, limitMB int, swapLimitInMB int) {
 	}
 }
 
+func setCpuLimit(containerID string, limit float64)  {
+	cfsPeriodPath := "/sys/fs/cgroup/cpu/gocker/" + containerID +
+		"/cpu.cfs_period_us"
+	cfsQuotaPath := "/sys/fs/cgroup/cpu/gocker/" + containerID +
+		"/cpu.cfs_quota_us"
+
+	if limit > float64(runtime.NumCPU()) {
+		fmt.Printf("Ignoring attempt to set CPU quota to great than number of available CPUs")
+		return
+	}
+
+	doOrDieWithMsg(ioutil.WriteFile(cfsPeriodPath,
+		[]byte(strconv.Itoa(1000000)), 0644),
+		"Unable to write CFS period")
+
+	doOrDieWithMsg(ioutil.WriteFile(cfsQuotaPath,
+		[]byte(strconv.Itoa(int(1000000 * limit))), 0644),
+		"Unable to write CFS period")
+
+}
+
 func configureCGroups(containerID string, mem int, swap int, pids int, cpus float64) {
 	if mem > 0 {
 		setMemoryLimit(containerID, mem, swap)
+	}
+	if cpus > 0 {
+		setCpuLimit(containerID, cpus)
 	}
 }

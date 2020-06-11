@@ -86,7 +86,7 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64,
 	imgConfig := parseContainerConfig(imageShaHex)
 	doOrDieWithMsg(syscall.Sethostname([]byte(containerID)), "Unable to set hostname")
 	doOrDieWithMsg(joinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
-	createCGroups(containerID)
+	createCGroups(containerID, true)
 	configureCGroups(containerID, mem, swap, pids, cpus)
 	doOrDieWithMsg(copyNameserverConfig(containerID), "Unable to copy resolve.conf")
 	doOrDieWithMsg(syscall.Chroot(mntPath), "Unable to chroot")
