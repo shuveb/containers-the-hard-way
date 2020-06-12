@@ -68,6 +68,7 @@ func unmountContainerFs(containerID string) {
 		log.Fatalf("Uable to mount container file system: %v at %s", err, mountedPath)
 	}
 }
+
 func copyNameserverConfig(containerID string) error {
 	resolvFilePaths := []string{
 		"/var/run/systemd/resolve/resolv.conf",
@@ -84,6 +85,7 @@ func copyNameserverConfig(containerID string) error {
 	}
 	return nil
 }
+
 /*
 	Called if this program is executed with "child-mode" as the first argument
 */
@@ -103,12 +105,19 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64,
 	doOrDieWithMsg(copyNameserverConfig(containerID), "Unable to copy resolve.conf")
 	doOrDieWithMsg(syscall.Chroot(mntPath), "Unable to chroot")
 	doOrDieWithMsg(os.Chdir("/"), "Unable to change directory")
-	createDirsIfDontExist([]string{"/proc"})
+	createDirsIfDontExist([]string{"/proc",  "/sys"})
 	doOrDieWithMsg(syscall.Mount("proc", "/proc", "proc", 0, ""), "Unable to mount proc")
 	doOrDieWithMsg(syscall.Mount("tmpfs", "/tmp", "tmpfs", 0, ""), "Unable to mount tmpfs")
+	doOrDieWithMsg(syscall.Mount("tmpfs", "/dev", "tmpfs", 0, ""), "Unable to mount tmpfs on /dev")
+	createDirsIfDontExist([]string{"/dev/pts"})
+	doOrDieWithMsg(syscall.Mount("devpts", "/dev/pts", "devpts", 0, ""), "Unable to mount devpts")
+	doOrDieWithMsg(syscall.Mount("sysfs", "/sys", "sysfs", 0, ""), "Unable to mount sysfs")
 	setupLocalInterface()
 	cmd.Env = imgConfig.Config.Env
 	cmd.Run()
+	doOrDie(syscall.Unmount("/dev/pts", 0))
+	doOrDie(syscall.Unmount("/dev", 0))
+	doOrDie(syscall.Unmount("/sys", 0))
 	doOrDie(syscall.Unmount("/proc", 0))
 	doOrDie(syscall.Unmount("/tmp", 0))
 }
@@ -150,7 +159,6 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 	       UTS       CLONE_NEWUTS    Hostname and NIS
 	                                 domain name
 	*/
-	fmt.Println("building child args:", mem, pids, cpus)
 	var opts []string
 	if mem > 0 {
 		opts = append(opts, "--mem=" + strconv.Itoa(mem))
@@ -165,11 +173,9 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 		opts = append(opts, "--cpus=" + strconv.FormatFloat(cpus, 'f', 1, 64))
 	}
 	opts = append(opts, "--img=" + imageShaHex)
-	fmt.Println("args:", opts)
 	args := append([]string{containerID}, cmdArgs...)
 	args = append(opts, args...)
 	args = append([]string{"child-mode"}, args...)
-	fmt.Println("args:", args)
 	cmd = exec.Command("/proc/self/exe", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -199,4 +205,5 @@ func initContainer(mem int, swap int, pids int, cpus float64, src string, args [
 	unmountNetworkNamespace(containerID)
 	unmountContainerFs(containerID)
 	removeCGroups(containerID)
+	os.RemoveAll(getGockerContainersPath() + "/" + containerID)
 }

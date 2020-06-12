@@ -55,7 +55,6 @@ func main() {
 		if len(fs.Args()) < 2 {
 			log.Fatalf("Please pass image name and command to run")
 		}
-		fmt.Println("run options:", *mem, *swap, *pids, *cpus, fs.Args())
 		/* Create and setup the gocker0 network bridge we need */
 		if isUp, _ := isGockerBridgeUp(); !isUp {
 			log.Println("Bringing up the gocker0 bridge...")
@@ -79,7 +78,6 @@ func main() {
 		if len(fs.Args()) < 2 {
 			log.Fatalf("Please pass image name and command to run")
 		}
-		fmt.Println("child-mode options:", *mem, *swap, *pids, *cpus, *image, fs.Args())
 		execContainerCommand(*mem, *swap, *pids, *cpus, fs.Args()[0], *image, fs.Args()[1:])
 	case "setup-netns":
 		setupNewNetworkNamespace(os.Args[2])

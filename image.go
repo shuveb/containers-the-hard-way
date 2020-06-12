@@ -198,7 +198,6 @@ func storeImageMetadata(image string, tag string, imageShaHex string) {
 	idb := imagesDB{}
 	ientry := imageEntries{}
 	parseImagesMetadata(&idb)
-	log.Printf("Images Metadata: %v\n", idb)
 	if idb[image] != nil {
 		ientry = idb[image]
 	}
@@ -222,13 +221,11 @@ func removeImageMetadata(imageShaHex string) {
 			delete(ientries, tag)
 		}
 	}
-	log.Printf("Final images: %v\n", ientries)
 	if len(ientries) == 0 {
 		delete(idb, imgName)
 	} else {
 		idb[imgName] = ientries
 	}
-	log.Printf("Final images metadata: %v\n", idb)
 	marshalImageMetadata(idb)
 }
 

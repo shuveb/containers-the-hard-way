@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
+	"golang.org/x/sys/unix"
 	"log"
 	"math/rand"
 	"net"
@@ -111,7 +111,7 @@ func setupContainerNetworkInterfaceStep2(containerID string) {
 	if err := syscall.Unshare(syscall.CLONE_NEWNET); err !=nil {
 		log.Fatalf("Unshare system call failed: %v\n", err)
 	}
-	if err := netns.Setns(netns.NsHandle(fd), syscall.CLONE_NEWNET); err != nil {
+	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
 		log.Fatalf("Setns system call failed: %v\n", err)
 	}
 
@@ -179,7 +179,7 @@ func setupNewNetworkNamespace(containerID string) {
 	if err := syscall.Mount("/proc/self/ns/net", nsMount, "bind", syscall.MS_BIND, ""); err != nil {
 		log.Fatalf("Mount system call failed: %v\n", err)
 	}
-	if err := netns.Setns(netns.NsHandle(fd), syscall.CLONE_NEWNET); err != nil {
+	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
 		log.Fatalf("Setns system call failed: %v\n", err)
 	}
 }
@@ -195,7 +195,7 @@ func joinContainerNetworkNamespace(containerID string) error {
 		log.Printf("Unshare system call failed: %v\n", err)
 		return err
 	}
-	if err := netns.Setns(netns.NsHandle(fd), syscall.CLONE_NEWNET); err != nil {
+	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
 		log.Printf("Setns system call failed: %v\n", err)
 		return err
 	}
