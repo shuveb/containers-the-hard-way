@@ -1,20 +1,20 @@
 # Containers the hard way: Gocker: A mini Docker written in Go
-It is a set of Linux's operating system primitives that provide the illusion of a container. A process or a set of processes can shed their environment or namespaces and live in new namespaces of their own. Container management systems like Docker make it incredibly easy to manage containers on your machine. But how are these containers constructed? It is just a sequence of Linux system calls, and the very basic level while also leveraging other existing Linux technologies for container file system and networking.
+It is a set of Linux's operating system primitives that provide the illusion of a container. A process or a set of processes can shed their environment or namespaces and live in new namespaces of their own, separate from the host's `default` namespace. Container management systems like Docker make it incredibly easy to manage containers on your machine. But how are these containers constructed? It is just a sequence of Linux system calls (involving namespaces and cgroups, mainly), at the very basic level while also leveraging other existing Linux technologies for container file system, networking, etc.
 
 ## What is Gocker?
-Gocker is a an implementation of the core functionalities of Docker in the Go programming language. The main aim here is to provide an understanding of how exactly containers work at the Linux system call level. Gocker allows you to create containers, manage container images, exec processes in existing containers, etc.
+Gocker is an implementation from scratch of the core functionalities of Docker in the Go programming language. The main aim here is to provide an understanding of how exactly containers work at the Linux system call level. Gocker allows you to create containers, manage container images, execute processes in existing containers, etc.
 
 ## Why Gocker?
 When I came across [bocker](https://github.com/p8952/bocker), which is Docker-like container management written system in Bash shell script, I found 2 problems with it:
-* Bocker uses various Linux utilities. While you get the point, command line utilities are opaque, and you don't understand what they are doing at the Linux system call level. Also, a single command can sometime issue a more than one pertinent system calls.
+* Bocker uses various Linux utilities. While you get the point, command line utilities are opaque, and you don't get to understand what they are doing at the Linux system call level. Also, a single command can sometime issue a more than one pertinent system calls.
 * Boker's last commit is more than 5 years ago, and it does not work anymore. Docker Hub API changes seem to have broken it.
 
-Gocker on the other hand is pure Go source code where you can see what exactly goes on at the Linux system call level. This should give you a way better understanding of how containers actually work.
+Gocker on the other hand is pure Go source code which allows you to see what exactly goes on at the Linux system call level. This should give you a way better understanding of how containers actually work.
 
- Don't get me wrong here. Bocker is still a fantastic and very creatively written tool. If you want to understand how containers work, you should still take a look at it and I'm confident you'll learn a thing or two.
+ Don't get me wrong here. Bocker is still a fantastic and very creatively written tool. If you want to understand how containers work, you should still take a look at it and I'm confident you'll learn a thing or two from it, just like I did.
  
  ## Gocker capabilities
- Gocker can emulate the core of Docker, letting you manager Docker images (which it gets from Docker Hub), run containers, list running containers or exec a process in an already running container:
+ Gocker can emulate the core of Docker, letting you manager Docker images (which it gets from Docker Hub), run containers, list running containers or execute a process in an already running container:
  * Run a process in a container
      * gocker run <--cpus=cpus-max> <--mem=mem-max> <--pids=pids-max> <image[:tag]> </path/to/command>
  * List running containers
@@ -29,6 +29,7 @@ Gocker on the other hand is pure Go source code where you can see what exactly g
 ### Other capabilities     
 * Gocker uses the Ovelay file system to create containers quickly without the need to copy whole file systems while also sharing the same container image between multiple container instances.
 * Gocker containers get their own networking namespace and are able to access the internet. See limitations below.
+* You can control system resources like CPU percentage, the amount of RAM and the number of processes. Gocker achieves this by leveraging cgroups.
     
 ## Gocker container isolation
 Containers created with Gocker get the following namespaces of their own (see `run.go`):
@@ -39,7 +40,7 @@ Containers created with Gocker get the following namespaces of their own (see `r
 * Mount
 * Network
 
-CGroups to limit the following are created, but left to use unlimited resources unless you specify the `--mem`, `--cpus` or `--pids` options to the `gocker run` command. These flags limit the maximum RAM, CPU cores and PIDs the container can consume respectively.
+While cgroups to limit the following are created, continers are left to use unlimited resources unless you specify the `--mem`, `--cpus` or `--pids` options to the `gocker run` command. These flags limit the maximum RAM, CPU cores and PIDs the container can consume respectively.
 * Number of CPU cores
 * RAM
 * Number of PIDs (to limit processes)
@@ -146,17 +147,26 @@ root@c7eb7bab7e4c:/#
 Here are some limitations I'd love to fix in a future release:
 
 * Gocker does not currently support exposing container ports on the host. Whenever Docker containers need to expose ports on the host, Docker uses the program `docker-proxy` as a proxy to get that done. Gocker needs a similar proxy developed. While Gocker containers can access the internet today, the ability to expose ports on the host will be a great feature to have (mainly to learn how that's done).
-* Gocker does not do error handling well. Should something go wrong especially when running a container, Gocker might not cleanly unmount some file systems.
+* Gocker does not do error handling well. Should something go wrong especially when attempting to run a container, Gocker might not cleanly unmount some file systems.
+
+## Containers accessing internet
+When you run Gocker for the first time, a new bridge, `gocker0` is created. Since all container network interfaces are connected to this bridge, they can talk to each other without you having to do anything. For containers to be able to reach the internet though, you need to enable packet forwarding on the host. For this, a convenience script `enable_internet.sh` has been provided. You might need to change it to reflect the name of your internet connected interface before you run it. There are instructions in the script. After you run this, Gocker containers should be able to reach the internet and install packages, etc.
+
+## External Go libraries used
+* [GoContainerRegistry](github.com/google/go-containerregistry) for downloading container images from a container registry, the default being Docker Hub.
+* [PFlag](github.com/spf13/pflag) for handling command line flags.
+* [Netlink](github.com/vishvananda/netlink) to configure Linux network interfaces without having to get bogged down by Netlink socket programming.
+* [Unix](golang.org/x/sys/unix) Because Unix :)
 
 ## Disclaimer
-Gocker runs as root. Use at your own risk. This is my first Go program beyond a reasonable number of lines, and I'm sure there are better ways to write Go programs and there might still be a lot of bugs lingering in there. Here are some things Gocker does to your system so you know:
+Gocker runs as root. Use at your own risk. This is my first Go program beyond a reasonable number of lines, and I'm sure there are better ways to write Go programs and there might still be a lot of bugs lingering in here. Here are some things Gocker does to your system so you know:
 
 * It creates the `gocker0` bridge if it does not exist.
 * It blindly assumes that the IP address range `172.29.*.*` is available and uses it.
 * It creates various namespaces and cgroups.
 * It mounts overlay file systems.
 
-To this end, the safest way to run Gocker might be in a container.
+To this end, the safest way to run Gocker might be in a virtual machine.
 
 ### Distributions
 I developed Gocker on my day-to-day Arch Linux based computer. I also tested Gocker on an Ubuntu 20.04 virtual machine. It works great.
