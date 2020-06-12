@@ -39,7 +39,7 @@ func untar(tarball, target string) error {
 			/* Store details of hard links, which we process finally */
 			linkPath := filepath.Join(target, header.Linkname)
 			linkPath2 := filepath.Join(target, header.Name)
-			hardLinks[linkPath] = linkPath2
+			hardLinks[linkPath2] = linkPath
 			continue
 
 		case tar.TypeSymlink:
@@ -77,7 +77,7 @@ func untar(tarball, target string) error {
 
 	/* To create hard links the targets must exist, so we do this finally */
 	for k, v := range hardLinks {
-		if err := os.Link(k, v); err != nil {
+		if err := os.Link(v, k); err != nil {
 			return err
 		}
 	}

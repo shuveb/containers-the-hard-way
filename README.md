@@ -146,7 +146,7 @@ root@c7eb7bab7e4c:/#
 Here are some limitations I'd love to fix in a future release:
 
 * Gocker does not currently support exposing container ports on the host. Whenever Docker containers need to expose ports on the host, Docker uses the program `docker-proxy` as a proxy to get that done. Gocker needs a similar proxy developed. While Gocker containers can access the internet today, the ability to expose ports on the host will be a great feature to have (mainly to learn how that's done).
-* Gocker implements untarring of the container images in `tar.go`. This file has known limitations dealing with images with hardlinks, at least when there are a lot of them. Because of this, the `busybox` Docker Hub image does not work. I'd like to fix this sometime.
+* Gocker does not do error handling well. Should something go wrong especially when running a container, Gocker might not cleanly unmount some file systems.
 
 ## Disclaimer
 Gocker runs as root. Use at your own risk. This is my first Go program beyond a reasonable number of lines, and I'm sure there are better ways to write Go programs and there might still be a lot of bugs lingering in there. Here are some things Gocker does to your system so you know:
