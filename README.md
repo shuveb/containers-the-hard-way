@@ -153,10 +153,10 @@ Here are some limitations I'd love to fix in a future release:
 When you run Gocker for the first time, a new bridge, `gocker0` is created. Since all container network interfaces are connected to this bridge, they can talk to each other without you having to do anything. For containers to be able to reach the internet though, you need to enable packet forwarding on the host. For this, a convenience script `enable_internet.sh` has been provided. You might need to change it to reflect the name of your internet connected interface before you run it. There are instructions in the script. After you run this, Gocker containers should be able to reach the internet and install packages, etc.
 
 ## External Go libraries used
-* [GoContainerRegistry](github.com/google/go-containerregistry) for downloading container images from a container registry, the default being Docker Hub.
-* [PFlag](github.com/spf13/pflag) for handling command line flags.
-* [Netlink](github.com/vishvananda/netlink) to configure Linux network interfaces without having to get bogged down by Netlink socket programming.
-* [Unix](golang.org/x/sys/unix) Because Unix :)
+* [GoContainerRegistry](https://github.com/google/go-containerregistry) for downloading container images from a container registry, the default being Docker Hub.
+* [PFlag](https://github.com/spf13/pflag) for handling command line flags.
+* [Netlink](https://github.com/vishvananda/netlink) to configure Linux network interfaces without having to get bogged down by Netlink socket programming.
+* [Unix](https://golang.org/x/sys/unix) Because Unix :)
 
 ## Disclaimer
 Gocker runs as root. Use at your own risk. This is my first Go program beyond a reasonable number of lines, and I'm sure there are better ways to write Go programs and there might still be a lot of bugs lingering in here. Here are some things Gocker does to your system so you know:
