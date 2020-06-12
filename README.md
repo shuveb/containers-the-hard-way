@@ -4,6 +4,9 @@ It is a set of Linux's operating system primitives that provide the illusion of 
 ## What is Gocker?
 Gocker is an implementation from scratch of the core functionalities of Docker in the Go programming language. The main aim here is to provide an understanding of how exactly containers work at the Linux system call level. Gocker allows you to create containers, manage container images, execute processes in existing containers, etc.
 
+## Gocker explanation
+Gocker and how it works is explained at the Linux system call level [on the Unixism blog](https://unixism.net/2020/06/containers-the-hard-way-gocker-a-mini-docker-written-in-go/). If you are interested in that level of detail, please read it.
+
 ## Why Gocker?
 When I came across [bocker](https://github.com/p8952/bocker), which is Docker-like container management written system in Bash shell script, I found 2 problems with it:
 * Bocker uses various Linux utilities. While you get the point, command line utilities are opaque, and you don't get to understand what they are doing at the Linux system call level. Also, a single command can sometime issue a more than one pertinent system calls.
