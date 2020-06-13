@@ -4,6 +4,8 @@ It is a set of Linux's operating system primitives that provide the illusion of 
 ## What is Gocker?
 Gocker is an implementation from scratch of the core functionalities of Docker in the Go programming language. The main aim here is to provide an understanding of how exactly containers work at the Linux system call level. Gocker allows you to create containers, manage container images, execute processes in existing containers, etc.
 
+![Gocker session](https://unixism.net/wp-content/uploads/2020/06/Gocker.png)
+
 ## Gocker explanation
 Gocker and how it works is explained at the Linux system call level [on the Unixism blog](https://unixism.net/2020/06/containers-the-hard-way-gocker-a-mini-docker-written-in-go/). If you are interested in that level of detail, please read it.
 
