@@ -174,5 +174,14 @@ To this end, the safest way to run Gocker might be in a virtual machine.
 ### Distributions
 I developed Gocker on my day-to-day Arch Linux based computer. I also tested Gocker on an Ubuntu 20.04 virtual machine. It works great.
 
+## Building and running
+Once you clone the repo, assuming you have Go installed on your machine, change into the Gocker directory and use the following command to retrieve dependencies:
+
+```go get```
+
+Then, to build `gocker`, run the following command:
+
+```go build -o gocker .```
+
 ## About me
 My name is Shuveb Hussain and I'm the author of the Linux-focused blog [Unixism.net](https://unixism.net). You can [follow me on Twitter](https://twitter.com/shuveb) where I post tech-related content mostly focusing on Linux, performance, scalability and cloud technologies.
