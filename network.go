@@ -83,7 +83,7 @@ func setupVirtualEthOnHost(containerID string) error {
 }
 
 func setupContainerNetworkInterfaceStep1(containerID string) {
-	nsMount := getGockerNetNsPath()  + "/" + containerID
+	nsMount := getGockerNetNsPath() + "/" + containerID
 
 	fd, err := syscall.Open(nsMount, syscall.O_RDONLY, 0)
 	defer syscall.Close(fd)
@@ -102,14 +102,11 @@ func setupContainerNetworkInterfaceStep1(containerID string) {
 }
 
 func setupContainerNetworkInterfaceStep2(containerID string) {
-	nsMount := getGockerNetNsPath()  + "/" + containerID
+	nsMount := getGockerNetNsPath() + "/" + containerID
 	fd, err := syscall.Open(nsMount, syscall.O_RDONLY, 0)
 	defer syscall.Close(fd)
 	if err != nil {
 		log.Fatalf("Unable to open: %v\n", err)
-	}
-	if err := syscall.Unshare(syscall.CLONE_NEWNET); err !=nil {
-		log.Fatalf("Unshare system call failed: %v\n", err)
 	}
 	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
 		log.Fatalf("Setns system call failed: %v\n", err)
@@ -130,10 +127,10 @@ func setupContainerNetworkInterfaceStep2(containerID string) {
 
 	/* Add a default route */
 	route := netlink.Route{
-		Scope: netlink.SCOPE_UNIVERSE,
+		Scope:     netlink.SCOPE_UNIVERSE,
 		LinkIndex: veth1Link.Attrs().Index,
-		Gw: net.ParseIP("172.29.0.1"),
-		Dst: nil,
+		Gw:        net.ParseIP("172.29.0.1"),
+		Dst:       nil,
 	}
 	doOrDieWithMsg(netlink.RouteAdd(&route), "Unable to add default route")
 }
@@ -162,7 +159,7 @@ func setupLocalInterface() {
 
 func setupNewNetworkNamespace(containerID string) {
 	_ = createDirsIfDontExist([]string{getGockerNetNsPath()})
-	nsMount := getGockerNetNsPath()  + "/" + containerID
+	nsMount := getGockerNetNsPath() + "/" + containerID
 	if _, err := syscall.Open(nsMount, syscall.O_RDONLY|syscall.O_CREAT|syscall.O_EXCL, 0644); err != nil {
 		log.Fatalf("Unable to open bind mount file: :%v\n", err)
 	}
@@ -173,7 +170,7 @@ func setupNewNetworkNamespace(containerID string) {
 		log.Fatalf("Unable to open: %v\n", err)
 	}
 
-	if err := syscall.Unshare(syscall.CLONE_NEWNET); err !=nil {
+	if err := syscall.Unshare(syscall.CLONE_NEWNET); err != nil {
 		log.Fatalf("Unshare system call failed: %v\n", err)
 	}
 	if err := syscall.Mount("/proc/self/ns/net", nsMount, "bind", syscall.MS_BIND, ""); err != nil {
@@ -185,14 +182,10 @@ func setupNewNetworkNamespace(containerID string) {
 }
 
 func joinContainerNetworkNamespace(containerID string) error {
-	nsMount := getGockerNetNsPath()  + "/" + containerID
+	nsMount := getGockerNetNsPath() + "/" + containerID
 	fd, err := syscall.Open(nsMount, syscall.O_RDONLY, 0)
 	if err != nil {
 		log.Printf("Unable to open: %v\n", err)
-		return err
-	}
-	if err := syscall.Unshare(syscall.CLONE_NEWNET); err !=nil {
-		log.Printf("Unshare system call failed: %v\n", err)
 		return err
 	}
 	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
@@ -201,3 +194,4 @@ func joinContainerNetworkNamespace(containerID string) error {
 	}
 	return nil
 }
+

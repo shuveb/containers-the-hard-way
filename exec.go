@@ -23,7 +23,7 @@ func getPidForRunningContainer(containerID string) int {
 	return 0
 }
 
-func execInContainer(containerId string)  {
+func execInContainer(containerId string) {
 	pid := getPidForRunningContainer(containerId)
 	if pid == 0 {
 		log.Fatalf("No such container!")
@@ -39,11 +39,6 @@ func execInContainer(containerId string)  {
 		pidErr != nil || utsErr != nil {
 		log.Fatalf("Unable to open namespace files!")
 	}
-	syscall.Unshare(syscall.CLONE_NEWIPC)
-	syscall.Unshare(syscall.CLONE_NEWNS)
-	syscall.Unshare(syscall.CLONE_NEWNET)
-	syscall.Unshare(syscall.CLONE_NEWPID)
-	syscall.Unshare(syscall.CLONE_NEWUTS)
 
 	unix.Setns(int(ipcFd.Fd()), syscall.CLONE_NEWIPC)
 	unix.Setns(int(mntFd.Fd()), syscall.CLONE_NEWNS)
