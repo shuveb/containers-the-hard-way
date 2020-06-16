@@ -19,7 +19,7 @@ Gocker on the other hand is pure Go source code which allows you to see what exa
  Don't get me wrong here. Bocker is still a fantastic and very creatively written tool. If you want to understand how containers work, you should still take a look at it and I'm confident you'll learn a thing or two from it, just like I did.
  
  ## Gocker capabilities
- Gocker can emulate the core of Docker, letting you manager Docker images (which it gets from Docker Hub), run containers, list running containers or execute a process in an already running container:
+ Gocker can emulate the core of Docker, letting you manage Docker images (which it gets from Docker Hub), run containers, list running containers or execute a process in an already running container:
  * Run a process in a container
      * gocker run <--cpus=cpus-max> <--mem=mem-max> <--pids=pids-max> <image[:tag]> </path/to/command>
  * List running containers
