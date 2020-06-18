@@ -12,27 +12,27 @@ Gocker and how it works is explained at the Linux system call level [on the Unix
 ## Why Gocker?
 When I came across [bocker](https://github.com/p8952/bocker), which is Docker-like container management written system in Bash shell script, I found 2 problems with it:
 * Bocker uses various Linux utilities. While you get the point, command line utilities are opaque, and you don't get to understand what they are doing at the Linux system call level. Also, a single command can sometime issue a more than one pertinent system calls.
-* Boker's last commit is more than 5 years ago, and it does not work anymore. Docker Hub API changes seem to have broken it.
+* Bocker's last commit is more than 5 years ago, and it does not work anymore. Docker Hub API changes seem to have broken it.
 
 Gocker on the other hand is pure Go source code which allows you to see what exactly goes on at the Linux system call level. This should give you a way better understanding of how containers actually work.
 
- Don't get me wrong here. Bocker is still a fantastic and very creatively written tool. If you want to understand how containers work, you should still take a look at it and I'm confident you'll learn a thing or two from it, just like I did.
+Don't get me wrong here. Bocker is still a fantastic and very creatively written tool. If you want to understand how containers work, you should still take a look at it and I'm confident you'll learn a thing or two from it, just like I did.
  
- ## Gocker capabilities
- Gocker can emulate the core of Docker, letting you manage Docker images (which it gets from Docker Hub), run containers, list running containers or execute a process in an already running container:
- * Run a process in a container
-     * gocker run <--cpus=cpus-max> <--mem=mem-max> <--pids=pids-max> <image[:tag]> </path/to/command>
- * List running containers
-    * gocker ps
- * Execute a process in a running container
-    * gocker exec <container-id> </path/to/command>
- * List locally available images
-     * gocker images
- * Remove a locally available image
-     * gocker rmi <image-id>
+## Gocker capabilities
+Gocker can emulate the core of Docker, letting you manage Docker images (which it gets from Docker Hub), run containers, list running containers or execute a process in an already running container:
+* Run a process in a container
+   * `gocker run <--cpus=cpus-max> <--mem=mem-max> <--pids=pids-max> <image[:tag]> </path/to/command>`
+* List running containers
+   * `gocker ps`
+* Execute a process in a running container
+   * `gocker exec <container-id> </path/to/command>`
+* List locally available images
+   * `gocker images`
+* Remove a locally available image
+   * `gocker rmi <image-id>`
 
 ### Other capabilities     
-* Gocker uses the Ovelay file system to create containers quickly without the need to copy whole file systems while also sharing the same container image between multiple container instances.
+* Gocker uses the Overlay file system to create containers quickly without the need to copy whole file systems while also sharing the same container image between multiple container instances.
 * Gocker containers get their own networking namespace and are able to access the internet. See limitations below.
 * You can control system resources like CPU percentage, the amount of RAM and the number of processes. Gocker achieves this by leveraging cgroups.
     
