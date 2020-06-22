@@ -179,7 +179,7 @@ I developed Gocker on my day-to-day Arch Linux based computer. I also tested Goc
 ## Building and running
 Once you clone the repo, assuming you have Go installed on your machine, change into the Gocker directory and use the following command to retrieve dependencies:
 
-```go get```
+```go mod download```
 
 Then, to build `gocker`, run the following command:
 
