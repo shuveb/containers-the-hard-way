@@ -1,6 +1,7 @@
 package main
 
 import (
+	"golang.org/x/sys/unix"
 	"fmt"
 	"log"
 	"math/rand"
@@ -8,7 +9,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 func createContainerID() string {
@@ -50,21 +50,21 @@ func mountOverlayFileSystem(containerID string, imageShaHex string) {
 	}
 	contFSHome := getContainerFSHome(containerID)
 	mntOptions := "lowerdir=" + strings.Join(srcLayers, ":") + ",upperdir=" + contFSHome + "/upperdir,workdir=" + contFSHome + "/workdir"
-	if err := syscall.Mount("none", contFSHome+"/mnt", "overlay", 0, mntOptions); err != nil {
+	if err := unix.Mount("none", contFSHome+"/mnt", "overlay", 0, mntOptions); err != nil {
 		log.Fatalf("Mount failed: %v\n", err)
 	}
 }
 
 func unmountNetworkNamespace(containerID string) {
 	netNsPath := getGockerNetNsPath() + "/" + containerID
-	if err := syscall.Unmount(netNsPath, 0); err != nil {
+	if err := unix.Unmount(netNsPath, 0); err != nil {
 		log.Fatalf("Uable to mount network namespace: %v at %s", err, netNsPath)
 	}
 }
 
 func unmountContainerFs(containerID string) {
 	mountedPath := getGockerContainersPath() + "/" + containerID + "/fs/mnt"
-	if err := syscall.Unmount(mountedPath, 0); err != nil {
+	if err := unix.Unmount(mountedPath, 0); err != nil {
 		log.Fatalf("Uable to mount container file system: %v at %s", err, mountedPath)
 	}
 }
@@ -98,28 +98,28 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64,
 	cmd.Stderr = os.Stderr
 
 	imgConfig := parseContainerConfig(imageShaHex)
-	doOrDieWithMsg(syscall.Sethostname([]byte(containerID)), "Unable to set hostname")
+	doOrDieWithMsg(unix.Sethostname([]byte(containerID)), "Unable to set hostname")
 	doOrDieWithMsg(joinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
 	createCGroups(containerID, true)
 	configureCGroups(containerID, mem, swap, pids, cpus)
 	doOrDieWithMsg(copyNameserverConfig(containerID), "Unable to copy resolve.conf")
-	doOrDieWithMsg(syscall.Chroot(mntPath), "Unable to chroot")
+	doOrDieWithMsg(unix.Chroot(mntPath), "Unable to chroot")
 	doOrDieWithMsg(os.Chdir("/"), "Unable to change directory")
 	createDirsIfDontExist([]string{"/proc", "/sys"})
-	doOrDieWithMsg(syscall.Mount("proc", "/proc", "proc", 0, ""), "Unable to mount proc")
-	doOrDieWithMsg(syscall.Mount("tmpfs", "/tmp", "tmpfs", 0, ""), "Unable to mount tmpfs")
-	doOrDieWithMsg(syscall.Mount("tmpfs", "/dev", "tmpfs", 0, ""), "Unable to mount tmpfs on /dev")
+	doOrDieWithMsg(unix.Mount("proc", "/proc", "proc", 0, ""), "Unable to mount proc")
+	doOrDieWithMsg(unix.Mount("tmpfs", "/tmp", "tmpfs", 0, ""), "Unable to mount tmpfs")
+	doOrDieWithMsg(unix.Mount("tmpfs", "/dev", "tmpfs", 0, ""), "Unable to mount tmpfs on /dev")
 	createDirsIfDontExist([]string{"/dev/pts"})
-	doOrDieWithMsg(syscall.Mount("devpts", "/dev/pts", "devpts", 0, ""), "Unable to mount devpts")
-	doOrDieWithMsg(syscall.Mount("sysfs", "/sys", "sysfs", 0, ""), "Unable to mount sysfs")
+	doOrDieWithMsg(unix.Mount("devpts", "/dev/pts", "devpts", 0, ""), "Unable to mount devpts")
+	doOrDieWithMsg(unix.Mount("sysfs", "/sys", "sysfs", 0, ""), "Unable to mount sysfs")
 	setupLocalInterface()
 	cmd.Env = imgConfig.Config.Env
 	cmd.Run()
-	doOrDie(syscall.Unmount("/dev/pts", 0))
-	doOrDie(syscall.Unmount("/dev", 0))
-	doOrDie(syscall.Unmount("/sys", 0))
-	doOrDie(syscall.Unmount("/proc", 0))
-	doOrDie(syscall.Unmount("/tmp", 0))
+	doOrDie(unix.Unmount("/dev/pts", 0))
+	doOrDie(unix.Unmount("/dev", 0))
+	doOrDie(unix.Unmount("/sys", 0))
+	doOrDie(unix.Unmount("/proc", 0))
+	doOrDie(unix.Unmount("/tmp", 0))
 }
 
 func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
@@ -180,11 +180,11 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWNS |
-			syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWIPC,
+	cmd.SysProcAttr = &unix.SysProcAttr{
+		Cloneflags: unix.CLONE_NEWPID |
+			unix.CLONE_NEWNS |
+			unix.CLONE_NEWUTS |
+			unix.CLONE_NEWIPC,
 	}
 	doOrDie(cmd.Run())
 }

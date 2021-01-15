@@ -7,7 +7,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"syscall"
 )
 
 func createMACAddress() net.HardwareAddr {
@@ -85,8 +84,8 @@ func setupVirtualEthOnHost(containerID string) error {
 func setupContainerNetworkInterfaceStep1(containerID string) {
 	nsMount := getGockerNetNsPath() + "/" + containerID
 
-	fd, err := syscall.Open(nsMount, syscall.O_RDONLY, 0)
-	defer syscall.Close(fd)
+	fd, err := unix.Open(nsMount, unix.O_RDONLY, 0)
+	defer unix.Close(fd)
 	if err != nil {
 		log.Fatalf("Unable to open: %v\n", err)
 	}
@@ -103,12 +102,12 @@ func setupContainerNetworkInterfaceStep1(containerID string) {
 
 func setupContainerNetworkInterfaceStep2(containerID string) {
 	nsMount := getGockerNetNsPath() + "/" + containerID
-	fd, err := syscall.Open(nsMount, syscall.O_RDONLY, 0)
-	defer syscall.Close(fd)
+	fd, err := unix.Open(nsMount, unix.O_RDONLY, 0)
+	defer unix.Close(fd)
 	if err != nil {
 		log.Fatalf("Unable to open: %v\n", err)
 	}
-	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
+	if err := unix.Setns(fd, unix.CLONE_NEWNET); err != nil {
 		log.Fatalf("Setns system call failed: %v\n", err)
 	}
 
@@ -160,35 +159,35 @@ func setupLocalInterface() {
 func setupNewNetworkNamespace(containerID string) {
 	_ = createDirsIfDontExist([]string{getGockerNetNsPath()})
 	nsMount := getGockerNetNsPath() + "/" + containerID
-	if _, err := syscall.Open(nsMount, syscall.O_RDONLY|syscall.O_CREAT|syscall.O_EXCL, 0644); err != nil {
+	if _, err := unix.Open(nsMount, unix.O_RDONLY|unix.O_CREAT|unix.O_EXCL, 0644); err != nil {
 		log.Fatalf("Unable to open bind mount file: :%v\n", err)
 	}
 
-	fd, err := syscall.Open("/proc/self/ns/net", syscall.O_RDONLY, 0)
-	defer syscall.Close(fd)
+	fd, err := unix.Open("/proc/self/ns/net", unix.O_RDONLY, 0)
+	defer unix.Close(fd)
 	if err != nil {
 		log.Fatalf("Unable to open: %v\n", err)
 	}
 
-	if err := syscall.Unshare(syscall.CLONE_NEWNET); err != nil {
+	if err := unix.Unshare(unix.CLONE_NEWNET); err != nil {
 		log.Fatalf("Unshare system call failed: %v\n", err)
 	}
-	if err := syscall.Mount("/proc/self/ns/net", nsMount, "bind", syscall.MS_BIND, ""); err != nil {
+	if err := unix.Mount("/proc/self/ns/net", nsMount, "bind", unix.MS_BIND, ""); err != nil {
 		log.Fatalf("Mount system call failed: %v\n", err)
 	}
-	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
+	if err := unix.Setns(fd, unix.CLONE_NEWNET); err != nil {
 		log.Fatalf("Setns system call failed: %v\n", err)
 	}
 }
 
 func joinContainerNetworkNamespace(containerID string) error {
 	nsMount := getGockerNetNsPath() + "/" + containerID
-	fd, err := syscall.Open(nsMount, syscall.O_RDONLY, 0)
+	fd, err := unix.Open(nsMount, unix.O_RDONLY, 0)
 	if err != nil {
 		log.Printf("Unable to open: %v\n", err)
 		return err
 	}
-	if err := unix.Setns(fd, syscall.CLONE_NEWNET); err != nil {
+	if err := unix.Setns(fd, unix.CLONE_NEWNET); err != nil {
 		log.Printf("Setns system call failed: %v\n", err)
 		return err
 	}

@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 func getPidForRunningContainer(containerID string) int {
@@ -40,11 +39,11 @@ func execInContainer(containerId string) {
 		log.Fatalf("Unable to open namespace files!")
 	}
 
-	unix.Setns(int(ipcFd.Fd()), syscall.CLONE_NEWIPC)
-	unix.Setns(int(mntFd.Fd()), syscall.CLONE_NEWNS)
-	unix.Setns(int(netFd.Fd()), syscall.CLONE_NEWNET)
-	unix.Setns(int(pidFd.Fd()), syscall.CLONE_NEWPID)
-	unix.Setns(int(utsFd.Fd()), syscall.CLONE_NEWUTS)
+	unix.Setns(int(ipcFd.Fd()), unix.CLONE_NEWIPC)
+	unix.Setns(int(mntFd.Fd()), unix.CLONE_NEWNS)
+	unix.Setns(int(netFd.Fd()), unix.CLONE_NEWNET)
+	unix.Setns(int(pidFd.Fd()), unix.CLONE_NEWPID)
+	unix.Setns(int(utsFd.Fd()), unix.CLONE_NEWUTS)
 
 	containerConfig, err := getRunningContainerInfoForId(containerId)
 	if err != nil {
@@ -58,7 +57,7 @@ func execInContainer(containerId string) {
 	imgConfig := parseContainerConfig(imageShaHex)
 	containerMntPath := getGockerContainersPath() + "/" + containerId + "/fs/mnt"
 	createCGroups(containerId, false)
-	doOrDieWithMsg(syscall.Chroot(containerMntPath), "Unable to chroot")
+	doOrDieWithMsg(unix.Chroot(containerMntPath), "Unable to chroot")
 	os.Chdir("/")
 	cmd := exec.Command(os.Args[3], os.Args[4:]...)
 	cmd.Stdin = os.Stdin
