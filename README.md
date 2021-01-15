@@ -45,7 +45,7 @@ Containers created with Gocker get the following namespaces of their own (see `r
 * Mount
 * Network
 
-While cgroups to limit the following are created, continers are left to use unlimited resources unless you specify the `--mem`, `--cpus` or `--pids` options to the `gocker run` command. These flags limit the maximum RAM, CPU cores and PIDs the container can consume respectively.
+While cgroups to limit the following are created, containers are left to use unlimited resources unless you specify the `--mem`, `--cpus` or `--pids` options to the `gocker run` command. These flags limit the maximum RAM, CPU cores and PIDs the container can consume respectively.
 * Number of CPU cores
 * RAM
 * Number of PIDs (to limit processes)
