@@ -65,7 +65,7 @@ func unmountNetworkNamespace(containerID string) {
 func unmountContainerFs(containerID string) {
 	mountedPath := getGockerContainersPath() + "/" + containerID + "/fs/mnt"
 	if err := unix.Unmount(mountedPath, 0); err != nil {
-		log.Fatalf("Uable to mount container file system: %v at %s", err, mountedPath)
+		log.Fatalf("Unable to mount container file system: %v at %s", err, mountedPath)
 	}
 }
 
